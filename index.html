@@ -438,7 +438,7 @@ this.bgmGain = null;
 this.bgmVolume = 0.25;
 
 this.volumes = {
-master: 1.0,
+master:0.7,
 playerShot: 0.3,
 playerThrust: 0.65,
 enemyLow: 0.5,
@@ -3310,6 +3310,7 @@ this.animFrameId = requestAnimationFrame(frame);
 function creadoraPaginas() {
   document.body.innerHTML = "";
 
+  // 1. Estilos del lienzo (2400px x 3000px)
   const styleTag = document.createElement("style");
   styleTag.textContent = `
     * { box-sizing: border-box; }
@@ -3386,18 +3387,20 @@ function creadoraPaginas() {
   `;
   document.head.appendChild(styleTag);
 
+  // 2. Helpers y paleta de colores desgastada
   const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
   const paletaDesgastada = [
-    () => `hsl(${rand(200, 215)}, ${rand(8, 20)}%, ${rand(25, 42)}%)`,
-    () => `hsl(${rand(85, 120)}, ${rand(8, 20)}%, ${rand(20, 35)}%)`,
-    () => `hsl(${rand(28, 38)}, ${rand(10, 16)}%, ${rand(22, 32)}%)`,
-    () => `hsl(${rand(210, 230)}, ${rand(3, 8)}%, ${rand(18, 38)}%)`
+    () => `hsl(${rand(200, 215)}, ${rand(8, 20)}%, ${rand(25, 42)}%)`, // Acero oscuro
+    () => `hsl(${rand(85, 120)}, ${rand(8, 20)}%, ${rand(20, 35)}%)`,  // Oliva militar
+    () => `hsl(${rand(28, 38)}, ${rand(10, 16)}%, ${rand(22, 32)}%)`,  // Óxido mate
+    () => `hsl(${rand(210, 230)}, ${rand(3, 8)}%, ${rand(18, 38)}%)`   // Pizarra
   ];
   const randColor = () => paletaDesgastada[rand(0, paletaDesgastada.length - 1)]();
   const palabras = ["GRID", "SECTOR", "CORE", "VALVE", "DRAIN", "PUMP", "BEAM", "SYNC"];
   const randPalabra = () => palabras[rand(0, palabras.length - 1)];
 
+  // Imagen base 70x70
   const generarImg70 = () => {
     const c = document.createElement("canvas");
     c.width = 70;
@@ -3412,6 +3415,7 @@ function creadoraPaginas() {
     return c.toDataURL("image/webp");
   };
 
+  // Video animado 70x70
   const crearVideoStream70 = () => {
     const vCanvas = document.createElement("canvas");
     vCanvas.width = 70;
@@ -3426,11 +3430,14 @@ function creadoraPaginas() {
     return vCanvas.captureStream(10);
   };
 
+  // 3. Lienzo contenedor
   const lienzo = document.createElement("div");
   lienzo.className = "lienzo-gigante";
   document.body.appendChild(lienzo);
 
-  for (let i = 1; i <= 10; i++) {
+  // REDUCIDO: 5 sectores (antes 10)
+  for (let i = 1; i <= 5; i++) {
+    // Etiqueta de coordenada
     const tag = document.createElement("div");
     tag.className = "etiqueta-nodo";
     tag.textContent = `// COORD_SECTOR_[0${i}]_STATUS_OK`;
@@ -3438,6 +3445,7 @@ function creadoraPaginas() {
     tag.style.left = `${rand(50, 2250)}px`;
     lienzo.appendChild(tag);
 
+    // VIDEO (1 por sector = 5 en total)
     const video = document.createElement("video");
     video.className = "media-70";
     video.autoplay = true;
@@ -3448,7 +3456,8 @@ function creadoraPaginas() {
     video.style.left = `${rand(40, 2300)}px`;
     lienzo.appendChild(video);
 
-    const cantImgs = rand(2, 4);
+    // IMÁGENES: Reducido a 1 o 2 (antes 2 a 4)
+    const cantImgs = rand(1, 2);
     for (let m = 0; m < cantImgs; m++) {
       const img = document.createElement("img");
       img.className = "media-70";
@@ -3458,7 +3467,8 @@ function creadoraPaginas() {
       lienzo.appendChild(img);
     }
 
-    const cantMini = rand(3, 5);
+    // MINI-CANVAS: Reducido a 1 o 2 (antes 3 a 5)
+    const cantMini = rand(1, 2);
     for (let c = 0; c < cantMini; c++) {
       const dim = rand(30, 40);
       const cv = document.createElement("canvas");
@@ -3479,6 +3489,7 @@ function creadoraPaginas() {
       lienzo.appendChild(cv);
     }
 
+    // SELECTORES (1 por sector = 5 en total)
     const sel = document.createElement("select");
     sel.style.top = `${rand(40, 2920)}px`;
     sel.style.left = `${rand(40, 2250)}px`;
@@ -3489,7 +3500,8 @@ function creadoraPaginas() {
     `;
     lienzo.appendChild(sel);
 
-    const cantSliders = rand(2, 4);
+    // SLIDERS: Reducido a 1 o 2 (antes 2 a 4)
+    const cantSliders = rand(1, 2);
     for (let s = 0; s < cantSliders; s++) {
       const w = rand(60, 120);
       const h = rand(20, 40);
@@ -3507,7 +3519,8 @@ function creadoraPaginas() {
       lienzo.appendChild(range);
     }
 
-    const cantChecks = rand(2, 4);
+    // CHECKBOXES: Reducido a 1 o 2 (antes 2 a 4)
+    const cantChecks = rand(1, 2);
     for (let k = 0; k < cantChecks; k++) {
       const w = rand(60, 120);
       const h = rand(60, 120);
@@ -3534,7 +3547,8 @@ function creadoraPaginas() {
       lienzo.appendChild(pad);
     }
 
-    const cantBtn = rand(4, 7);
+    // BOTONES: Reducido a 2 o 3 (antes 4 a 7)
+    const cantBtn = rand(2, 3);
     for (let b = 0; b < cantBtn; b++) {
       const w = rand(60, 120);
       const h = rand(60, 120);
@@ -3550,7 +3564,6 @@ function creadoraPaginas() {
     }
   }
 }
-
 window.addEventListener("DOMContentLoaded", () => {
   creadoraPaginas();
   new BattlePageAddonEngine();
