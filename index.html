@@ -201,7 +201,6 @@
           const my = toScreenY(cy);
 
           if (b.maxSpeed > 0) {
-            // Drone móvil: Diamante Naranja
             this.ctx.fillStyle = "#ff9f1a";
             this.ctx.beginPath();
             this.ctx.moveTo(mx, my - 3.5);
@@ -211,7 +210,6 @@
             this.ctx.closePath();
             this.ctx.fill();
           } else {
-            // Estructura / Torreta fija: Rojo intenso
             this.ctx.fillStyle = "#ff3838";
             this.ctx.beginPath();
             this.ctx.arc(mx, my, 2.5, 0, Math.PI * 2);
@@ -243,19 +241,16 @@
         const mx = toScreenX(px);
         const my = toScreenY(py);
 
-        // Halo del jugador
         this.ctx.fillStyle = "rgba(0, 229, 255, 0.25)";
         this.ctx.beginPath();
         this.ctx.arc(mx, my, 6, 0, Math.PI * 2);
         this.ctx.fill();
 
-        // Núcleo del jugador
         this.ctx.fillStyle = "#00e5ff";
         this.ctx.beginPath();
         this.ctx.arc(mx, my, 3, 0, Math.PI * 2);
         this.ctx.fill();
 
-        // Vector de rumbo
         const cos = Math.cos(shipBody.angle);
         const sin = Math.sin(shipBody.angle);
         this.ctx.strokeStyle = "#ffffff";
@@ -265,7 +260,7 @@
         this.ctx.lineTo(mx + cos * 9, my + sin * 9);
         this.ctx.stroke();
 
-        // 4. Flecha exterior que apunta al enemigo más cercano
+        // 4. Flecha exterior hacia el enemigo más cercano
         if (closestEnemy && closestEnemy.health > 0) {
           const ex = closestEnemy.position.x + closestEnemy.width * 0.5;
           const ey = closestEnemy.position.y + closestEnemy.height * 0.5;
@@ -1498,6 +1493,7 @@
       this.input = null;
       this.gamepad = new GamepadControllerEngine();
       this.virtualControls = null;
+      this.mobileStartBtn = null;
       this.views = [];
       this.turrets = [];
       this.drones = [];
@@ -1528,6 +1524,100 @@
       this.fireSpriteUrl = "https://unonibes4a.github.io/SONIDOS/spritesheetfire.png";
 
       this.listenGlobalKeys();
+      this.checkAndRenderMobileLauncher();
+    }
+
+    isMobileOrTablet() {
+      const userAgentCheck = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const touchCheck = (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
+      const screenCheck = window.matchMedia("(max-width: 1024px)").matches;
+      return userAgentCheck || (touchCheck && screenCheck);
+    }
+
+    checkAndRenderMobileLauncher() {
+      if (!this.isMobileOrTablet()) return;
+      if (document.getElementById("engine-mobile-start-btn")) return;
+
+      const btn = document.createElement("button");
+      btn.id = "engine-mobile-start-btn";
+      btn.innerHTML = `<span style="font-size:20px;">⚔️</span> INICIAR BATALLA`;
+
+      // Posicionamiento fixed y z-index al máximo número entero permitido en CSS (2147483647)
+      Object.assign(btn.style, {
+        position: "fixed",
+        bottom: "28px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        padding: "16px 32px",
+        fontSize: "16px",
+        fontWeight: "900",
+        fontFamily: "system-ui, -apple-system, monospace, sans-serif",
+        letterSpacing: "1.5px",
+        textTransform: "uppercase",
+        color: "#060b19",
+        background: "linear-gradient(135deg, #00e5ff 0%, #2ed573 100%)",
+        border: "3px solid #ffffff",
+        borderRadius: "50px",
+        boxShadow: "0 0 30px rgba(0, 229, 255, 0.8), 0 10px 25px rgba(0,0,0,0.7)",
+        cursor: "pointer",
+        zIndex: "2147483647",
+        userSelect: "none",
+        webkitTapHighlightColor: "transparent",
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        transition: "transform 0.15s ease"
+      });
+
+      btn.addEventListener("touchstart", () => {
+        btn.style.transform = "translateX(-50%) scale(0.93)";
+      }, { passive: true });
+
+      btn.addEventListener("touchend", () => {
+        btn.style.transform = "translateX(-50%) scale(1)";
+      }, { passive: true });
+
+      btn.addEventListener("click", async () => {
+        // Preguntar al usuario si desea modo horizontal (Landscape) o vertical
+        const userWantsLandscape = confirm(
+          "¿Deseas colocar la pantalla en modo horizontal (Landscape)?\n\n[ Aceptar ] = Modo Horizontal (Landscape)\n[ Cancelar ] = Modo Vertical"
+        );
+
+        if (userWantsLandscape) {
+          try {
+            // Intentar solicitar pantalla completa primero (necesario en móviles para bloquear orientación)
+            if (document.documentElement.requestFullscreen) {
+              await document.documentElement.requestFullscreen();
+            } else if (document.documentElement.webkitRequestFullscreen) {
+              await document.documentElement.webkitRequestFullscreen();
+            }
+            // Bloqueo en horizontal
+            if (screen.orientation && screen.orientation.lock) {
+              await screen.orientation.lock("landscape").catch(() => {});
+            }
+          } catch (e) {}
+        } else {
+          try {
+            // Intento de fijación en vertical
+            if (screen.orientation && screen.orientation.lock) {
+              await screen.orientation.lock("portrait").catch(() => {});
+            }
+          } catch (e) {}
+        }
+
+        this.removeMobileLauncher();
+        if (!this.running) this.start();
+      });
+
+      document.body.appendChild(btn);
+      this.mobileStartBtn = btn;
+    }
+
+    removeMobileLauncher() {
+      if (this.mobileStartBtn && this.mobileStartBtn.parentNode) {
+        this.mobileStartBtn.parentNode.removeChild(this.mobileStartBtn);
+      }
+      this.mobileStartBtn = null;
     }
 
     listenGlobalKeys() {
@@ -1543,6 +1633,7 @@
     }
 
     start() {
+      this.removeMobileLauncher();
       this.styleInjector.inject();
       document.documentElement.style.overflow = "hidden";
       document.body.style.overflow = "hidden";
@@ -1658,7 +1749,7 @@
       this.reticleEl.className = "reticle-engine";
       this.stage.appendChild(this.reticleEl);
 
-      // Crear HUD y Minimapa táctico (Fuera del stage para que sean interfaz fija)
+      // Crear HUD y Minimapa táctico (Fuera del stage para interfaz fija)
       this.hudStatusEl = document.createElement("div");
       this.hudStatusEl.className = "hud-status-engine";
 
@@ -1763,6 +1854,9 @@
       document.body.innerHTML = this.savedHTML;
       document.documentElement.style.overflow = "auto";
       document.body.style.overflow = "auto";
+
+      // Recrear botón móvil si corresponde
+      this.checkAndRenderMobileLauncher();
     }
 
     handleGameEnd() {
