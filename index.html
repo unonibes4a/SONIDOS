@@ -1542,7 +1542,6 @@
       btn.id = "engine-mobile-start-btn";
       btn.innerHTML = `<span style="font-size:20px;">⚔️</span> INICIAR BATALLA`;
 
-      // Posicionamiento fixed y z-index al máximo número entero permitido en CSS (2147483647)
       Object.assign(btn.style, {
         position: "fixed",
         bottom: "28px",
@@ -1578,27 +1577,23 @@
       }, { passive: true });
 
       btn.addEventListener("click", async () => {
-        // Preguntar al usuario si desea modo horizontal (Landscape) o vertical
         const userWantsLandscape = confirm(
           "¿Deseas colocar la pantalla en modo horizontal (Landscape)?\n\n[ Aceptar ] = Modo Horizontal (Landscape)\n[ Cancelar ] = Modo Vertical"
         );
 
         if (userWantsLandscape) {
           try {
-            // Intentar solicitar pantalla completa primero (necesario en móviles para bloquear orientación)
             if (document.documentElement.requestFullscreen) {
               await document.documentElement.requestFullscreen();
             } else if (document.documentElement.webkitRequestFullscreen) {
               await document.documentElement.webkitRequestFullscreen();
             }
-            // Bloqueo en horizontal
             if (screen.orientation && screen.orientation.lock) {
               await screen.orientation.lock("landscape").catch(() => {});
             }
           } catch (e) {}
         } else {
           try {
-            // Intento de fijación en vertical
             if (screen.orientation && screen.orientation.lock) {
               await screen.orientation.lock("portrait").catch(() => {});
             }
@@ -1653,7 +1648,6 @@
       this.isVictory = false;
       this.startTime = performance.now();
 
-      // Recolectar elementos a destruir ANTES de inyectar la UI del juego
       const rawElements = Array.from(document.body.querySelectorAll("*"));
       const elementData = [];
 
@@ -1735,7 +1729,6 @@
         maxY: Math.max(bMaxY, window.innerHeight) + 150
       };
 
-      // Crear Stage del mundo
       this.stage = document.createElement("div");
       this.stage.id = "battle-stage";
       this.stage.style.position = "absolute";
@@ -1749,13 +1742,11 @@
       this.reticleEl.className = "reticle-engine";
       this.stage.appendChild(this.reticleEl);
 
-      // Crear HUD y Minimapa táctico (Fuera del stage para interfaz fija)
       this.hudStatusEl = document.createElement("div");
       this.hudStatusEl.className = "hud-status-engine";
 
       this.minimap = new MinimapEngine({ size: 160 });
 
-      // Limpiar y montar la arena de combate
       document.body.innerHTML = "";
       document.body.appendChild(this.stage);
       document.body.appendChild(this.hudStatusEl);
@@ -1803,7 +1794,6 @@
         }
       });
 
-      // Creación del jugador
       this.shipBtn = new BotonEngine({
         texto: "Bt",
         ancho: 36,
@@ -1820,7 +1810,7 @@
         mass: 1.0,
         health: 10000,
         restitution: 0.1,
-        friction: 0.95,
+        friction: 0.94,
         maxSpeed: 520,
         tag: "player"
       });
@@ -1855,7 +1845,6 @@
       document.documentElement.style.overflow = "auto";
       document.body.style.overflow = "auto";
 
-      // Recrear botón móvil si corresponde
       this.checkAndRenderMobileLauncher();
     }
 
@@ -2505,41 +2494,66 @@
           this.teleportToClosestTarget();
         }
 
-        const rotSpeed = 3.8;
-        let rotDir = 0;
-        if (this.input.isDown("KeyA") || this.input.isDown("ArrowLeft")) rotDir -= 1;
-        if (this.input.isDown("KeyD") || this.input.isDown("ArrowRight")) rotDir += 1;
-
+        // --- SISTEMA DE MOVIMIENTO Y CONTROL OMNIDIRECCIONAL ---
         const joy = this.virtualControls.axis;
-        if (Math.abs(joy.x) > 0.15) {
-          rotDir = joy.x * 1.5;
-        }
+        const joyMag = Math.hypot(joy.x, joy.y);
 
         const padX = this.gamepad.getMoveX();
-        if (Math.abs(padX) > 0.18) {
-          rotDir = padX * 1.6;
-        }
-
-        this.ship.angularVelocity = rotDir * rotSpeed;
-
-        let thrustActive = this.input.isDown("KeyW") || this.input.isDown("ArrowUp");
-        let thrustPower = 1200;
-
-        if (joy.y < -0.2) {
-          thrustActive = true;
-          thrustPower = 1200 * Math.min(1.0, Math.abs(joy.y));
-        }
-
         const padY = this.gamepad.getMoveY();
-        if (padY < -0.18) {
-          thrustActive = true;
-          thrustPower = 1200 * Math.min(1.0, Math.abs(padY));
+        const padMag = Math.hypot(padX, padY);
+
+        let stickX = 0;
+        let stickY = 0;
+        let stickMag = 0;
+
+        if (joyMag > 0.15) {
+          stickX = joy.x;
+          stickY = joy.y;
+          stickMag = joyMag;
+        } else if (padMag > 0.18) {
+          stickX = padX;
+          stickY = padY;
+          stickMag = padMag;
         }
 
-        if (thrustActive) {
+        let thrustActive = false;
+
+        if (stickMag > 0.15) {
+          // 1. Orientar la nave directamente hacia donde apunta el joystick
+          const targetAngle = Math.atan2(stickY, stickX);
+          let angleDiff = targetAngle - this.ship.angle;
+          // Normalizar diferencia angular a (-PI, PI]
+          angleDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+
+          const turnRate = 22; // Rotación rápida y ágil hacia el rumbo
+          this.ship.angle += angleDiff * Math.min(1.0, turnRate * dtSec);
+          this.ship.angularVelocity = 0;
+
+          // 2. Aplicar fuerza en la dirección exacta señalada por el joystick
+          const thrustPower = 1450 * Math.min(1.0, stickMag);
           const fx = Math.cos(this.ship.angle) * thrustPower;
           const fy = Math.sin(this.ship.angle) * thrustPower;
           this.ship.applyForce(fx, fy);
+          thrustActive = true;
+        } else {
+          // Modo teclado estándar de respaldo (Flechas / WASD)
+          const rotSpeed = 3.8;
+          let rotDir = 0;
+          if (this.input.isDown("KeyA") || this.input.isDown("ArrowLeft")) rotDir -= 1;
+          if (this.input.isDown("KeyD") || this.input.isDown("ArrowRight")) rotDir += 1;
+          this.ship.angularVelocity = rotDir * rotSpeed;
+
+          if (this.input.isDown("KeyW") || this.input.isDown("ArrowUp")) {
+            const thrustPower = 1200;
+            const fx = Math.cos(this.ship.angle) * thrustPower;
+            const fy = Math.sin(this.ship.angle) * thrustPower;
+            this.ship.applyForce(fx, fy);
+            thrustActive = true;
+          }
+        }
+
+        // Activación de audio y efectos de propulsión
+        if (thrustActive) {
           this.shipBtn.setActivo(true);
           this.audio.startThrust();
         } else {
@@ -2547,6 +2561,7 @@
           this.audio.stopThrust();
         }
 
+        // --- SISTEMA DE DISPARO ---
         const isShootingInput = this.input.isDown("Space") || this.isVirtualFiring || this.gamepad.isAnyButtonPressed();
 
         if (isShootingInput) {
