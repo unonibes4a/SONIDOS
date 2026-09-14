@@ -1,25 +1,4 @@
-El jugador no se veía por dos razones principales:
-
-1.  El motor no arrancaba automáticamente: El script creaba new
-    BattlePageAddonEngine(), pero no ejecutaba start(). En PC quedaba esperando
-    una combinación oculta de teclas (Ctrl + Alt + Flecha Arriba), por lo que la
-    batalla nunca comenzaba y el jugador nunca se generaba en pantalla.
-2.  Camuflaje visual: El botón del jugador era un recuadro gris oscuro (#3b424c)
-    de apenas 36px que se confundía por completo con el fondo negro.
-
-Soluciones aplicadas:
-
-1.  Inicio automático inmediato: Ahora engine.start() arranca en cuanto carga la
-    página.
-2.  Diseño de nave visible con Neón Cyan: La nave del jugador ahora tiene un
-    diseño distintivo, halo de luz azul brillante (box-shadow neon), borde
-    iluminado, indicador de dirección frontal (flecha hacia donde apunta y
-    dispara) y un z-index alto para que nada lo tape.
-3.  Se mantiene intacta la regla de los 700px: Los drones dejan de perseguir y
-    disparar al alejarse a más de 700px, regresando a su zona de origen (-200
-    a 200 en X, -300 a 300 en Y).
-
-Aquí tienes el código completo y listo para funcionar:
+ 
 
 <!DOCTYPE html>
 <html lang="es">
